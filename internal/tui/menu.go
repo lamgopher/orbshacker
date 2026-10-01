@@ -165,7 +165,7 @@ func creditsText() string {
 		" 1. Fetches app info automatically from the SteamCMD public API",
 		" 2. Generates a fake appmanifest_<appid>.acf in your steamapps/ folder",
 		" 3. Places the fake exe in steamapps/common/<installdir>/",
-		"It never overwrites an existing manifest or executable.",
+		"If the exe already exists, it asks whether to launch it or overwrite it.",
 		"",
 		h("Database sources"),
 		" • Primary: Discord Official API",

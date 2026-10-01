@@ -45,7 +45,7 @@ Run `bin/orbshacker.exe`. Discord must be running.
 2. **Manual mode** — type an exact process name (subfolders allowed: `bin/win64/Game.exe`).
 3. **Steam Quest Mode** — search Steam, fetch app info from SteamCMD, review/edit name, install dir
    and exe, then create `appmanifest_<appid>.acf` + fake exe in `steamapps/common/<installdir>/`.
-   Existing manifests and executables are never overwritten.
+   If the exe already exists, you choose to launch it as is (default) or overwrite it.
 4. **Running fakes** — launched fakes with PID, status and uptime: `x` stop, `d` stop & delete files,
    `D` the same for all.
 5. **Credits & info**

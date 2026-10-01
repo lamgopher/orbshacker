@@ -40,7 +40,9 @@ type Fake struct {
 
 	// createdRoot is the topmost directory created for the exe, "" if none was created.
 	createdRoot string
-	cmd         *exec.Cmd
+	// keepExe is set when the exe existed before launch and must survive cleanup.
+	keepExe bool
+	cmd     *exec.Cmd
 }
 
 // Running reports whether the process is still alive.
@@ -112,10 +114,28 @@ func (m *Manager) LaunchDesktop(game, exeName string) (*Fake, error) {
 	return m.launch(game, target, "", true)
 }
 
-// LaunchAt creates the fake exe at an exact path (no overwrite) and starts it.
-// manifestPath is remembered so cleanup removes it too.
-func (m *Manager) LaunchAt(game, target, manifestPath string) (*Fake, error) {
-	return m.launch(game, target, manifestPath, false)
+// LaunchAt creates the fake exe at an exact path and starts it. An existing file
+// is replaced only when overwrite is set. manifestPath is remembered so cleanup
+// removes it too.
+func (m *Manager) LaunchAt(game, target, manifestPath string, overwrite bool) (*Fake, error) {
+	return m.launch(game, target, manifestPath, overwrite)
+}
+
+// StartExisting starts the executable already present at target without
+// replacing it. Cleanup removes the manifest but keeps the executable.
+func (m *Manager) StartExisting(game, target, manifestPath string) (*Fake, error) {
+	cmd, err := start(game, target)
+	if err != nil {
+		return nil, err
+	}
+	f := m.track(game, target, manifestPath, cmd)
+	f.keepExe = true
+	return f, nil
+}
+
+// IsRunning reports whether a tracked fake is running from target.
+func (m *Manager) IsRunning(target string) bool {
+	return m.runningAt(target)
 }
 
 func (m *Manager) launch(game, target, manifestPath string, overwrite bool) (*Fake, error) {
@@ -128,15 +148,28 @@ func (m *Manager) launch(game, target, manifestPath string, overwrite bool) (*Fa
 		return nil, err
 	}
 
+	cmd, err := start(game, target)
+	if err != nil {
+		os.Remove(target)
+		removeEmptyDirs(filepath.Dir(target), root)
+		return nil, err
+	}
+	f := m.track(game, target, manifestPath, cmd)
+	f.createdRoot = root
+	return f, nil
+}
+
+func start(game, target string) (*exec.Cmd, error) {
 	cmd := exec.Command(target, TimerModeFlag, TitleFlag, game)
 	cmd.Dir = filepath.Dir(target)
 	cmd.SysProcAttr = detachedAttr()
 	if err := cmd.Start(); err != nil {
-		os.Remove(target)
-		removeEmptyDirs(filepath.Dir(target), root)
 		return nil, fmt.Errorf("start process: %w", err)
 	}
+	return cmd, nil
+}
 
+func (m *Manager) track(game, target, manifestPath string, cmd *exec.Cmd) *Fake {
 	f := &Fake{
 		ID:           m.nextID,
 		Game:         game,
@@ -144,12 +177,11 @@ func (m *Manager) launch(game, target, manifestPath string, overwrite bool) (*Fa
 		ManifestPath: manifestPath,
 		PID:          cmd.Process.Pid,
 		Started:      time.Now(),
-		createdRoot:  root,
 		cmd:          cmd,
 	}
 	m.nextID++
 	m.fakes = append(m.fakes, f)
-	return f, nil
+	return f
 }
 
 // Wait blocks until the fake process exits. Call it from a background goroutine.
@@ -175,12 +207,15 @@ func (f *Fake) Stop() error {
 }
 
 // RemoveFiles deletes the exe, the manifest and directories created for the fake.
-// The process must have exited. Windows may keep the image locked for a moment
-// after exit, so deletion is retried briefly.
+// An exe that existed before launch is kept. The process must have exited.
+// Windows may keep the image locked for a moment after exit, so deletion is
+// retried briefly.
 func (f *Fake) RemoveFiles() error {
 	var errs []error
-	if err := removeWithRetry(f.ExePath); err != nil {
-		errs = append(errs, err)
+	if !f.keepExe {
+		if err := removeWithRetry(f.ExePath); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if f.ManifestPath != "" {
 		if err := os.Remove(f.ManifestPath); err != nil && !errors.Is(err, os.ErrNotExist) {

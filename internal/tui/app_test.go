@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/lamgopher/orbshacker/internal/config"
 	"github.com/lamgopher/orbshacker/internal/discord"
 	"github.com/lamgopher/orbshacker/internal/faker"
+	"github.com/lamgopher/orbshacker/internal/steam"
 )
 
 func newTestApp(t *testing.T) *App {
@@ -148,5 +151,41 @@ func TestGameWithoutExesOrSteam(t *testing.T) {
 	send(a, key(tea.KeyEnter))
 	if _, ok := a.screen.(*manualScreen); !ok {
 		t.Fatalf("expected manual mode, got %T", a.screen)
+	}
+}
+
+func TestSteamExistingExeAsksWhatToDo(t *testing.T) {
+	a := newTestApp(t)
+	steamPath := t.TempDir()
+	info := steam.AppInfo{AppID: 42, Name: "Demo", InstallDir: "Demo", Executable: "Demo.exe"}
+	exe := steam.FakeExePath(steamPath, info)
+	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(exe, []byte("real game"), 0o644)
+
+	s, _ := newSteam(a)
+	st := s.(*steamScreen)
+	st.steamPath = steamPath
+	st.openForm(info)
+	a.screen = st
+
+	send(a, key(tea.KeyEnter))
+	if st.step != stepExists {
+		t.Fatalf("expected confirm step, got %v (status %q)", st.step, a.status)
+	}
+	if st.existCursor != existingLaunch {
+		t.Fatalf("default choice = %d, want launch existing", st.existCursor)
+	}
+	if v := a.View(); !strings.Contains(v, "Launch the existing file") || !strings.Contains(v, "Overwrite") {
+		t.Fatalf("choices missing:\n%s", v)
+	}
+
+	send(a, key(tea.KeyEsc))
+	if st.step != stepForm {
+		t.Fatalf("esc should return to the form, got %v", st.step)
+	}
+	if data, _ := os.ReadFile(exe); string(data) != "real game" {
+		t.Fatalf("existing file was modified: %q", data)
 	}
 }

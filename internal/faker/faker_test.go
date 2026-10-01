@@ -86,3 +86,22 @@ func TestRemoveEmptyDirsKeepsNonEmpty(t *testing.T) {
 		t.Fatalf("non-empty dir must stay: %v", err)
 	}
 }
+
+func TestRemoveFilesKeepsPreexistingExe(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "Game.exe")
+	manifest := filepath.Join(dir, "appmanifest_1.acf")
+	os.WriteFile(exe, []byte("real game"), 0o644)
+	os.WriteFile(manifest, []byte("x"), 0o644)
+
+	f := &Fake{ExePath: exe, ManifestPath: manifest, keepExe: true}
+	if err := f.RemoveFiles(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(exe); err != nil {
+		t.Fatalf("pre-existing exe must stay: %v", err)
+	}
+	if _, err := os.Stat(manifest); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("manifest should be removed, stat err = %v", err)
+	}
+}

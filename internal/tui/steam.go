@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -21,7 +22,16 @@ const (
 	stepQuery
 	stepResults
 	stepForm
+	stepExists
 )
+
+// Choices offered when the fake exe path is already taken; the first is the default.
+const (
+	existingLaunch = iota
+	existingOverwrite
+)
+
+var existingChoices = [...]string{"Launch the existing file", "Overwrite it with a fake exe"}
 
 const (
 	fieldName = iota
@@ -57,6 +67,11 @@ type steamScreen struct {
 	fields [3]textinput.Model
 	focus  int
 	depot  string
+
+	// pending is the validated form waiting for the user's decision on an existing exe.
+	pending     steam.AppInfo
+	pendingExe  string
+	existCursor int
 
 	// busy is the text shown next to the spinner while a request runs.
 	busy string
@@ -145,6 +160,8 @@ func (s *steamScreen) update(a *App, msg tea.Msg) (screen, tea.Cmd) {
 			if next, cmd, handled := s.updateForm(a, msg); handled {
 				return next, cmd
 			}
+		case stepExists:
+			return s.updateExists(a, msg)
 		}
 	}
 
@@ -159,6 +176,9 @@ func (s *steamScreen) back() (screen, tea.Cmd) {
 		return s, nil
 	}
 	switch s.step {
+	case stepExists:
+		s.step = stepForm
+		return s, s.fields[s.focus].Focus()
 	case stepForm:
 		s.step = stepResults
 		s.fields[s.focus].Blur()
@@ -275,7 +295,8 @@ func (s *steamScreen) formInfo() (steam.AppInfo, error) {
 	return info, nil
 }
 
-// launch writes the manifest and starts the fake exe. ok is false on failure.
+// launch writes the manifest and starts the fake exe. ok is false when the
+// screen stays open: on failure or when the user must decide about an existing exe.
 func (s *steamScreen) launch(a *App) (cmd tea.Cmd, ok bool) {
 	info, err := s.formInfo()
 	if err != nil {
@@ -283,18 +304,56 @@ func (s *steamScreen) launch(a *App) (cmd tea.Cmd, ok bool) {
 		return nil, false
 	}
 	exePath := steam.FakeExePath(s.steamPath, info)
-	if _, err := os.Stat(exePath); err == nil {
-		a.setStatus(statusErr, "Refusing to overwrite existing file (is the game installed?): "+exePath)
+	if a.mgr.IsRunning(exePath) {
+		a.setStatus(statusErr, filepath.Base(exePath)+" is already running")
 		return nil, false
 	}
+	if _, err := os.Stat(exePath); err == nil {
+		s.pending, s.pendingExe = info, exePath
+		s.existCursor = existingLaunch
+		s.fields[s.focus].Blur()
+		s.step = stepExists
+		return nil, false
+	}
+	return s.start(a, info, exePath, false, false)
+}
+
+func (s *steamScreen) updateExists(a *App, key tea.KeyMsg) (screen, tea.Cmd) {
+	switch key.String() {
+	case "up", "k", "shift+tab":
+		s.existCursor = max(s.existCursor-1, 0)
+	case "down", "j", "tab":
+		s.existCursor = min(s.existCursor+1, len(existingChoices)-1)
+	case "enter":
+		if cmd, ok := s.start(a, s.pending, s.pendingExe, true, s.existCursor == existingOverwrite); ok {
+			return &menuScreen{}, cmd
+		}
+	}
+	return s, nil
+}
+
+// start writes the manifest and launches the exe. When exeExisted is set, an
+// existing manifest is reused and left in place on cleanup, and the exe is either
+// overwritten or started as is.
+func (s *steamScreen) start(a *App, info steam.AppInfo, exePath string, exeExisted, overwrite bool) (cmd tea.Cmd, ok bool) {
 	manifest, err := steam.WriteManifest(info, s.steamPath)
+	if exeExisted && errors.Is(err, steam.ErrManifestExists) {
+		manifest, err = "", nil
+	}
 	if err != nil {
 		a.setStatus(statusErr, "Failed to write appmanifest: "+err.Error())
 		return nil, false
 	}
-	f, err := a.mgr.LaunchAt(info.Name, exePath, manifest)
+	var f *faker.Fake
+	if exeExisted && !overwrite {
+		f, err = a.mgr.StartExisting(info.Name, exePath, manifest)
+	} else {
+		f, err = a.mgr.LaunchAt(info.Name, exePath, manifest, overwrite)
+	}
 	if err != nil {
-		os.Remove(manifest)
+		if manifest != "" {
+			os.Remove(manifest)
+		}
 		a.setStatus(statusErr, err.Error())
 		return nil, false
 	}
@@ -334,6 +393,8 @@ func (s *steamScreen) view(a *App) string {
 		b.WriteString(s.resultsView(a))
 	case stepForm:
 		b.WriteString(s.formView(a))
+	case stepExists:
+		b.WriteString(s.existsView(a))
 	}
 
 	if s.busy != "" {
@@ -348,6 +409,8 @@ func (s *steamScreen) view(a *App) string {
 		b.WriteString(help("↑/↓", "move", "enter", "select", "esc", "back"))
 	case stepForm:
 		b.WriteString(help("tab/↑/↓", "field", "enter", "create & launch", "esc", "back"))
+	case stepExists:
+		b.WriteString(help("↑/↓", "move", "enter", "confirm", "esc", "back"))
 	}
 	return b.String()
 }
@@ -389,5 +452,19 @@ func (s *steamScreen) formView(a *App) string {
 	width := a.contentWidth() - 14
 	b.WriteString(field("AppManifest", sMuted.Render(truncate(steam.ManifestPath(s.steamPath, info.AppID), width))) + "\n")
 	b.WriteString(field("Fake exe", sMuted.Render(truncate(steam.FakeExePath(s.steamPath, info), width))) + "\n")
+	return b.String()
+}
+
+func (s *steamScreen) existsView(a *App) string {
+	var b strings.Builder
+	b.WriteString(sYellow.Render("The executable already exists (the game may be installed, or a fake was left from a previous run):") + "\n")
+	b.WriteString(sMuted.Render(truncate(s.pendingExe, a.contentWidth())) + "\n\n")
+	for i, choice := range existingChoices {
+		if i == s.existCursor {
+			b.WriteString(sCursor.Render("▸ "+choice) + "\n")
+		} else {
+			b.WriteString("  " + choice + "\n")
+		}
+	}
 	return b.String()
 }
