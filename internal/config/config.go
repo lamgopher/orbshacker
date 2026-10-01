@@ -12,10 +12,18 @@ import (
 	"time"
 )
 
+// Version is set at build time from the git tag:
+//
+//	go build -ldflags "-X github.com/lamgopher/orbshacker/internal/config.Version=v1.0.0" ./cmd/orbshacker
+var Version = "dev"
+
 const (
-	Version   = "2.1.1"
+	// Developer is the author of the original orbshacker.
 	Developer = "Strykey"
-	RepoURL   = "https://github.com/Strykey/orbshacker"
+	// PortAuthor is the author of this Go version.
+	PortAuthor      = "lamgopher"
+	RepoURL         = "https://github.com/lamgopher/orbshacker"
+	OriginalRepoURL = "https://github.com/Strykey/orbshacker"
 
 	DiscordAPIURL       = "https://discord.com/api/v9/applications/detectable"
 	GitHubBackupURL     = "https://gist.githubusercontent.com/Cynosphere/c1e77f77f0e565ddaac2822977961e76/raw/gameslist.json"

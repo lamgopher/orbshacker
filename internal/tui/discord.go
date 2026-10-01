@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"orbshacker/internal/discord"
-	"orbshacker/internal/steam"
+	"github.com/lamgopher/orbshacker/internal/discord"
+	"github.com/lamgopher/orbshacker/internal/steam"
 )
 
 // --- search ------------------------------------------------------------------

@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"orbshacker/internal/config"
-	"orbshacker/internal/netutil"
+	"github.com/lamgopher/orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/netutil"
 )
 
 // steamID64Base converts a 32-bit account ID into a SteamID64.

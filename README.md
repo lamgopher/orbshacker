@@ -7,12 +7,32 @@ No Python required.
 
 > **Educational purposes only.** Use at your own risk and in compliance with Discord's Terms of Service.
 
+## Download
+
+Prebuilt `orbshacker.exe` is attached to every [release](https://github.com/lamgopher/orbshacker/releases).
+
 ## Build
 
 Requires Go 1.26+.
 
 ```bash
 go build -o bin/orbshacker.exe ./cmd/orbshacker
+```
+
+Local builds report version `dev`. To stamp a version:
+
+```bash
+go build -ldflags "-X github.com/lamgopher/orbshacker/internal/config.Version=v1.0.0" -o bin/orbshacker.exe ./cmd/orbshacker
+```
+
+## Releases
+
+Pushing a tag `v*` runs `.github/workflows/release.yml`: tests, builds `orbshacker.exe`
+with the tag as its version and publishes a GitHub Release.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ## Usage
@@ -61,6 +81,10 @@ internal/tui/       main terminal UI screens
 go test ./...
 ```
 
+## Credits
+
+Original orbshacker by [Strykey](https://github.com/Strykey/orbshacker). Go port by lamgopher.
+
 ## License
 
-GPL v3, as the original project. See [LICENSE](./LICENSE).
+Same license as the original project. See [LICENSE](./LICENSE).

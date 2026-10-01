@@ -10,8 +10,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"orbshacker/internal/faker"
-	"orbshacker/internal/steam"
+	"github.com/lamgopher/orbshacker/internal/faker"
+	"github.com/lamgopher/orbshacker/internal/steam"
 )
 
 type steamStep int

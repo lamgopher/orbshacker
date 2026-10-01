@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"os"
 
-	"orbshacker/internal/config"
-	"orbshacker/internal/faker"
-	"orbshacker/internal/timer"
-	"orbshacker/internal/tui"
+	"github.com/lamgopher/orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/faker"
+	"github.com/lamgopher/orbshacker/internal/timer"
+	"github.com/lamgopher/orbshacker/internal/tui"
 )
 
 func main() {

@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        shell: bash
+        run: |
+          go build -trimpath \
+            -ldflags "-s -w -X github.com/lamgopher/orbshacker/internal/config.Version=${GITHUB_REF_NAME}" \
+            -o dist/orbshacker.exe ./cmd/orbshacker
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: orbshacker ${{ github.ref_name }}
+          body: |
+            Download `orbshacker.exe` and run it. Nothing else to install.
+
+            See the [commit log](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for changes.
+          files: dist/orbshacker.exe

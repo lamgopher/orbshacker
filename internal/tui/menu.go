@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/config"
 )
 
 type menuItem struct {
@@ -69,7 +69,7 @@ func (s *menuScreen) view(a *App) string {
 	if a.height >= 24 && a.width >= 70 {
 		b.WriteString(sAccent.Bold(true).Render(banner))
 		b.WriteString("\n")
-		b.WriteString(sMuted.Render("Discord Orb Quest Faker · by " + config.Developer))
+		b.WriteString(sMuted.Render("Discord Orb Quest Faker · by " + config.Developer + " · Go port by " + config.PortAuthor))
 		b.WriteString("\n\n")
 	}
 
@@ -139,9 +139,11 @@ type creditsScreen struct {
 func creditsText() string {
 	h := sSection.Render
 	return strings.Join([]string{
-		field("Developer", sCyan.Render(config.Developer)),
-		field("Version", config.Version+sMuted.Render(" (Go TUI port)")),
+		field("Developer", sCyan.Render(config.Developer)+sMuted.Render(" (original)")),
+		field("Go port", sCyan.Render(config.PortAuthor)),
+		field("Version", config.Version),
 		field("Repository", sMuted.Render(config.RepoURL)),
+		field("Based on", sMuted.Render(config.OriginalRepoURL)),
 		"",
 		"This tool works as a game process spoofer. It tricks Discord into thinking",
 		"you're running a game by creating fake processes with the exact names",

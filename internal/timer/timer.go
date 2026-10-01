@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
 
-	"orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/config"
 )
 
 var (

@@ -12,9 +12,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"orbshacker/internal/config"
-	"orbshacker/internal/discord"
-	"orbshacker/internal/faker"
+	"github.com/lamgopher/orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/discord"
+	"github.com/lamgopher/orbshacker/internal/faker"
 )
 
 // screen is one page of the application.
@@ -148,7 +148,7 @@ func (a *App) View() string {
 }
 
 func (a *App) header() string {
-	left := sAccent.Bold(true).Render("orbshacker") + sMuted.Render(" v"+config.Version)
+	left := sAccent.Bold(true).Render("orbshacker") + sMuted.Render(" "+config.Version)
 
 	var db string
 	switch {

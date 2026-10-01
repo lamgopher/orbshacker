@@ -1,4 +1,4 @@
-module orbshacker
+module github.com/lamgopher/orbshacker
 
 go 1.26.5
 

@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"orbshacker/internal/config"
-	"orbshacker/internal/discord"
-	"orbshacker/internal/faker"
+	"github.com/lamgopher/orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/discord"
+	"github.com/lamgopher/orbshacker/internal/faker"
 )
 
 func newTestApp(t *testing.T) *App {

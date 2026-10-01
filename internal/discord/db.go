@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"orbshacker/internal/config"
-	"orbshacker/internal/netutil"
+	"github.com/lamgopher/orbshacker/internal/config"
+	"github.com/lamgopher/orbshacker/internal/netutil"
 )
 
 // Executable is a process Discord associates with a game.

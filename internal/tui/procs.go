@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"orbshacker/internal/faker"
+	"github.com/lamgopher/orbshacker/internal/faker"
 )
 
 type procsScreen struct {
